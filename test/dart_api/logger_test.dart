@@ -22,7 +22,10 @@ void main() {
       ''', logger: _TestLogger.withWarn((message,
               {span, trace, deprecation = false}) {
         expect(message, equals("heck"));
-        expect(span, isNull);
+        expect(span?.start.line, equals(0));
+        expect(span?.start.column, equals(20));
+        expect(span?.end.line, equals(0));
+        expect(span?.end.column, equals(30));
         expect(trace!.frames.first.member, equals('foo()'));
         expect(deprecation, isFalse);
         mustBeCalled();
