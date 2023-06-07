@@ -320,11 +320,19 @@ void main() {
         var logEvent = await getLogEvent(process);
         expect(logEvent.type, equals(LogEventType.WARNING));
         expect(logEvent.message, equals("hello"));
-        expect(logEvent.span, equals(SourceSpan()));
+        expect(logEvent.span.text, equals("@warn hello"));
+        expect(logEvent.span.start, equals(location(3, 0, 3)));
+        expect(logEvent.span.end, equals(location(14, 0, 14)));
+        expect(logEvent.span.context, equals("a {@warn hello}"));
         expect(logEvent.stackTrace, equals("- 1:4  root stylesheet\n"));
         expect(
             logEvent.formatted,
             equals('WARNING: hello\n'
+                '\n'
+                '  ╷\n'
+                '1 │ a {@warn hello}\n'
+                '  │    ^^^^^^^^^^^\n'
+                '  ╵\n'
                 '    - 1:4  root stylesheet\n'));
         await process.kill();
       });
@@ -335,6 +343,11 @@ void main() {
         expect(
             logEvent.formatted,
             equals('\x1B[33m\x1B[1mWarning\x1B[0m: hello\n'
+                '\n'
+                '\x1B[34m  ╷\x1B[0m\n'
+                '\x1B[34m1 │\x1B[0m a {\x1B[31m@warn hello\x1B[0m}\n'
+                '\x1B[34m  │\x1B[0m \x1B[31m   ^^^^^^^^^^^\x1B[0m\n'
+                '\x1B[34m  ╵\x1B[0m\n'
                 '    - 1:4  root stylesheet\n'));
         await process.kill();
       });

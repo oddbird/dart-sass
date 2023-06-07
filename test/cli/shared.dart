@@ -357,6 +357,11 @@ void sharedTests(
         sass.stderr,
         emitsInOrder([
           "WARNING: aw beans",
+          "",
+          "  ╷",
+          "1 │ @warn 'aw beans'",
+          "  │ ^^^^^^^^^^^^^^^^",
+          "  ╵",
           "    test.scss 1:1  root stylesheet",
         ]));
     await sass.shouldExit(0);
