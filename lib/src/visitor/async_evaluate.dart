@@ -2131,6 +2131,7 @@ class _EvaluateVisitor
         await _addExceptionSpanAsync(node, () => node.expression.accept(this));
     _logger.warn(
         value is SassString ? value.text : _serialize(value, node.expression),
+        span: node.span,
         trace: _stackTrace(node.span));
     return null;
   }
