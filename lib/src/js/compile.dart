@@ -338,6 +338,6 @@ final JSClass nodePackageImporterClass = () {
           entryPointDirectory ??
               (requireMainFilename() != null
                   ? p.dirname(requireMainFilename()!)
-                  : null)));
+                  : p.dirname(p.absolute('.')))));
   return jsClass;
 }();
