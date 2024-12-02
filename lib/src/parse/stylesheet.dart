@@ -609,7 +609,6 @@ abstract class StylesheetParser extends Parser {
     var start = scanner.state;
     scanner.expectChar($at, name: "@-rule");
     var name = interpolatedIdentifier();
-    whitespace();
 
     // We want to set [_isUseAllowed] to `false` *unless* we're parsing
     // `@charset`, `@forward`, or `@use`. To avoid double-comparing the rule
@@ -620,52 +619,75 @@ abstract class StylesheetParser extends Parser {
 
     switch (name.asPlain) {
       case "at-root":
+        whitespace(consumeNewlines: false);
         return _atRootRule(start);
       case "content":
+        // TODO: _contentRule consumes whitespace- is this needed?
+        whitespace(consumeNewlines: false);
         return _contentRule(start);
       case "debug":
+        whitespace(consumeNewlines: false);
         return _debugRule(start);
       case "each":
+        whitespace(consumeNewlines: true);
         return _eachRule(start, child);
       case "else":
+        whitespace();
         return _disallowedAtRule(start);
       case "error":
+        whitespace(consumeNewlines: false);
         return _errorRule(start);
       case "extend":
+        whitespace(consumeNewlines: true);
         return _extendRule(start);
       case "for":
+        whitespace(consumeNewlines: true);
         return _forRule(start, child);
       case "forward":
+        whitespace(consumeNewlines: true);
         _isUseAllowed = wasUseAllowed;
         if (!root) _disallowedAtRule(start);
         return _forwardRule(start);
       case "function":
+        whitespace(consumeNewlines: true);
         return _functionRule(start);
       case "if":
+        whitespace();
         return _ifRule(start, child);
       case "import":
+        whitespace(consumeNewlines: false);
         return _importRule(start);
       case "include":
+        whitespace(consumeNewlines: true);
         return _includeRule(start);
       case "media":
+        whitespace(consumeNewlines: false);
         return mediaRule(start);
       case "mixin":
+        whitespace(consumeNewlines: true);
         return _mixinRule(start);
       case "-moz-document":
+        whitespace(consumeNewlines: false);
         return mozDocumentRule(start, name);
       case "return":
+        whitespace(consumeNewlines: false);
         return _disallowedAtRule(start);
       case "supports":
+        whitespace(consumeNewlines: false);
         return supportsRule(start);
       case "use":
+        whitespace(consumeNewlines: true);
         _isUseAllowed = wasUseAllowed;
         if (!root) _disallowedAtRule(start);
         return _useRule(start);
       case "warn":
+        whitespace(consumeNewlines: false);
         return _warnRule(start);
       case "while":
+        whitespace();
         return _whileRule(start, child);
       default:
+        whitespace();
         return unknownAtRule(start, name);
     }
   }
@@ -789,11 +811,11 @@ abstract class StylesheetParser extends Parser {
     }
 
     var beforeWhitespace = scanner.location;
-    whitespace();
+    whitespace(consumeNewlines: false);
     ArgumentInvocation arguments;
     if (scanner.peekChar() == $lparen) {
       arguments = _argumentInvocation(mixin: true);
-      whitespace();
+      whitespace(consumeNewlines: false);
     } else {
       arguments = ArgumentInvocation.empty(beforeWhitespace.pointSpan());
     }
@@ -826,9 +848,9 @@ abstract class StylesheetParser extends Parser {
       variables.add(variableName());
       whitespace();
     }
-
+    whitespace(consumeNewlines: true);
     expectIdentifier("in");
-    whitespace();
+    whitespace(consumeNewlines: true);
 
     var list = _expression();
 
@@ -860,7 +882,7 @@ abstract class StylesheetParser extends Parser {
     var optional = scanner.scanChar($exclamation);
     if (optional) {
       expectIdentifier("optional");
-      whitespace();
+      whitespace(consumeNewlines: false);
     }
     expectStatementSeparator("@extend rule");
     return ExtendRule(value, scanner.spanFrom(start), optional: optional);
@@ -887,7 +909,7 @@ abstract class StylesheetParser extends Parser {
       ));
     }
 
-    whitespace();
+    whitespace(consumeNewlines: false);
     var arguments = _argumentDeclaration();
 
     if (_inMixin || _inContentBlock) {
@@ -926,10 +948,10 @@ abstract class StylesheetParser extends Parser {
     var wasInControlDirective = _inControlDirective;
     _inControlDirective = true;
     var variable = variableName();
-    whitespace();
+    whitespace(consumeNewlines: true);
 
     expectIdentifier("from");
-    whitespace();
+    whitespace(consumeNewlines: true);
 
     bool? exclusive;
     var from = _expression(until: () {
@@ -946,7 +968,7 @@ abstract class StylesheetParser extends Parser {
     });
     if (exclusive == null) scanner.error('Expected "to" or "through".');
 
-    whitespace();
+    whitespace(consumeNewlines: true);
     var to = _expression();
 
     return _withChildren(child, start, (children, span) {
@@ -965,10 +987,10 @@ abstract class StylesheetParser extends Parser {
 
     String? prefix;
     if (scanIdentifier("as")) {
-      whitespace();
+      whitespace(consumeNewlines: true);
       prefix = identifier(normalize: true);
       scanner.expectChar($asterisk);
-      whitespace();
+      whitespace(consumeNewlines: false);
     }
 
     Set<String>? shownMixinsAndFunctions;
@@ -982,7 +1004,7 @@ abstract class StylesheetParser extends Parser {
     }
 
     var configuration = _configuration(allowGuarded: true);
-    whitespace();
+    whitespace(consumeNewlines: false);
 
     expectStatementSeparator("@forward rule");
     var span = scanner.spanFrom(start);
@@ -1065,7 +1087,7 @@ abstract class StylesheetParser extends Parser {
   ImportRule _importRule(LineScannerState start) {
     var imports = <Import>[];
     do {
-      whitespace();
+      whitespace(consumeNewlines: false);
       var argument = importArgument();
       if (argument is DynamicImport) {
         warnings.add((
@@ -1083,7 +1105,7 @@ abstract class StylesheetParser extends Parser {
       }
 
       imports.add(argument);
-      whitespace();
+      whitespace(consumeNewlines: false);
     } while (scanner.scanChar($comma));
     expectStatementSeparator("@import rule");
 
@@ -1098,7 +1120,7 @@ abstract class StylesheetParser extends Parser {
     var start = scanner.state;
     if (scanner.peekChar() case $u || $U) {
       var url = dynamicUrl();
-      whitespace();
+      whitespace(consumeNewlines: false);
       var modifiers = tryImportModifiers();
       return StaticImport(
           url is StringExpression
@@ -1110,7 +1132,7 @@ abstract class StylesheetParser extends Parser {
 
     var url = string();
     var urlSpan = scanner.spanFrom(start);
-    whitespace();
+    whitespace(consumeNewlines: false);
     var modifiers = tryImportModifiers();
     if (isPlainImportUrl(url) || modifiers != null) {
       return StaticImport(
@@ -1259,17 +1281,17 @@ abstract class StylesheetParser extends Parser {
       name = _publicIdentifier();
     }
 
-    whitespace();
+    whitespace(consumeNewlines: false);
     var arguments = scanner.peekChar() == $lparen
         ? _argumentInvocation(mixin: true)
         : ArgumentInvocation.empty(scanner.emptySpan);
-    whitespace();
+    whitespace(consumeNewlines: false);
 
     ArgumentDeclaration? contentArguments;
     if (scanIdentifier("using")) {
-      whitespace();
+      whitespace(consumeNewlines: true);
       contentArguments = _argumentDeclaration();
-      whitespace();
+      whitespace(consumeNewlines: false);
     }
 
     ContentBlock? content;
@@ -1322,7 +1344,7 @@ abstract class StylesheetParser extends Parser {
       ));
     }
 
-    whitespace();
+    whitespace(consumeNewlines: false);
     var arguments = scanner.peekChar() == $lparen
         ? _argumentDeclaration()
         : ArgumentDeclaration.empty(scanner.emptySpan);
@@ -1335,7 +1357,7 @@ abstract class StylesheetParser extends Parser {
           scanner.spanFrom(start));
     }
 
-    whitespace();
+    whitespace(consumeNewlines: false);
     _inMixin = true;
 
     return _withChildren(_statement, start, (children, span) {
@@ -1372,7 +1394,7 @@ abstract class StylesheetParser extends Parser {
               buffer.addInterpolation(contents);
             } else {
               scanner.expectChar($lparen);
-              whitespace();
+              whitespace(consumeNewlines: false);
               var argument = interpolatedString();
               scanner.expectChar($rparen);
 
@@ -1405,7 +1427,7 @@ abstract class StylesheetParser extends Parser {
         }
       }
 
-      whitespace();
+      whitespace(consumeNewlines: false);
       if (!scanner.scanChar($comma)) break;
 
       buffer.writeCharCode($comma);
@@ -1434,6 +1456,7 @@ abstract class StylesheetParser extends Parser {
   ///
   /// [start] should point before the `@`.
   ReturnRule _returnRule(LineScannerState start) {
+    whitespace(consumeNewlines: true);
     var value = _expression();
     expectStatementSeparator("@return rule");
     return ReturnRule(value, scanner.spanFrom(start));
@@ -1445,7 +1468,7 @@ abstract class StylesheetParser extends Parser {
   @protected
   SupportsRule supportsRule(LineScannerState start) {
     var condition = _supportsCondition();
-    whitespace();
+    whitespace(consumeNewlines: false);
     return _withChildren(_statement, start,
         (children, span) => SupportsRule(condition, children, span));
   }
@@ -1455,12 +1478,12 @@ abstract class StylesheetParser extends Parser {
   /// [start] should point before the `@`.
   UseRule _useRule(LineScannerState start) {
     var url = _urlString();
-    whitespace();
+    whitespace(consumeNewlines: false);
 
     var namespace = _useNamespace(url, start);
-    whitespace();
+    whitespace(consumeNewlines: false);
     var configuration = _configuration();
-    whitespace();
+    whitespace(consumeNewlines: false);
 
     var span = scanner.spanFrom(start);
     if (!_isUseAllowed) {
@@ -1477,7 +1500,7 @@ abstract class StylesheetParser extends Parser {
   /// Returns `null` to indicate a `@use` rule without a URL.
   String? _useNamespace(Uri url, LineScannerState start) {
     if (scanIdentifier("as")) {
-      whitespace();
+      whitespace(consumeNewlines: true);
       return scanner.scanChar($asterisk) ? null : identifier();
     }
 
@@ -1508,17 +1531,19 @@ abstract class StylesheetParser extends Parser {
 
     var variableNames = <String>{};
     var configuration = <ConfiguredVariable>[];
-    whitespace();
+    whitespace(consumeNewlines: true);
     scanner.expectChar($lparen);
 
     while (true) {
-      whitespace();
+      whitespace(consumeNewlines: true);
 
       var variableStart = scanner.state;
       var name = variableName();
-      whitespace();
+      whitespace(consumeNewlines: true);
       scanner.expectChar($colon);
-      whitespace();
+      whitespace(consumeNewlines: true);
+      // TODO: This doesn't handle newlines, prevents tests in
+      // spec/directives/use|forward/whitespace/ from passing
       var expression = expressionUntilComma();
 
       var guarded = false;
@@ -1526,7 +1551,7 @@ abstract class StylesheetParser extends Parser {
       if (allowGuarded && scanner.scanChar($exclamation)) {
         if (identifier() == 'default') {
           guarded = true;
-          whitespace();
+          whitespace(consumeNewlines: true);
         } else {
           error("Invalid flag name.", scanner.spanFrom(flagStart));
         }
@@ -1541,7 +1566,7 @@ abstract class StylesheetParser extends Parser {
           .add(ConfiguredVariable(name, expression, span, guarded: guarded));
 
       if (!scanner.scanChar($comma)) break;
-      whitespace();
+      whitespace(consumeNewlines: true);
       if (!_lookingAtExpression()) break;
     }
 
@@ -3096,9 +3121,9 @@ abstract class StylesheetParser extends Parser {
     var start = scanner.state;
     var buffer = InterpolationBuffer();
     while (true) {
-      whitespace();
+      whitespace(consumeNewlines: false);
       _mediaQuery(buffer);
-      whitespace();
+      whitespace(consumeNewlines: false);
       if (!scanner.scanChar($comma)) break;
       buffer.writeCharCode($comma);
       buffer.writeCharCode($space);
@@ -3109,9 +3134,10 @@ abstract class StylesheetParser extends Parser {
   /// Consumes a single media query.
   void _mediaQuery(InterpolationBuffer buffer) {
     // This is somewhat duplicated in MediaQueryParser._mediaQuery.
+    // TODO: Do we need to duplicate the whitespace handling there?
     if (scanner.peekChar() == $lparen) {
       _mediaInParens(buffer);
-      whitespace();
+      whitespace(consumeNewlines: false);
       if (scanIdentifier("and")) {
         buffer.write(" and ");
         expectWhitespace();
@@ -3137,7 +3163,7 @@ abstract class StylesheetParser extends Parser {
       }
     }
 
-    whitespace();
+    whitespace(consumeNewlines: false);
     buffer.addInterpolation(identifier1);
     if (!_lookingAtInterpolatedIdentifier()) {
       // For example, "@media screen {".
@@ -3152,7 +3178,7 @@ abstract class StylesheetParser extends Parser {
       // For example, "@media screen and ..."
       buffer.write(" and ");
     } else {
-      whitespace();
+      whitespace(consumeNewlines: false);
       buffer.addInterpolation(identifier2);
       if (scanIdentifier("and")) {
         // For example, "@media only screen and ..."
