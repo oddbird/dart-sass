@@ -54,7 +54,7 @@ class SassParser extends StylesheetParser {
   }
 
   void expectStatementSeparator([String? name]) {
-    if (!atEndOfStatement()) _expectNewline();
+    if (!atEndOfStatement()) _expectNewline(canEndInSemicolon: true);
     if (_peekIndentation() <= currentIndentation) return;
     scanner.error(
         "Nothing may be indented ${name == null ? 'here' : 'beneath a $name'}.",
@@ -309,12 +309,16 @@ class SassParser extends StylesheetParser {
     return LoudComment(buffer.interpolation(scanner.spanFrom(start)));
   }
 
-  void whitespaceWithoutComments() {
+  void whitespaceWithoutComments({consumeNewlines = false}) {
     // This overrides whitespace consumption so that it doesn't consume
     // newlines.
     while (!scanner.isDone) {
       var next = scanner.peekChar();
-      if (next != $tab && next != $space) break;
+      if (!consumeNewlines && !next.isSpaceOrTab) {
+        break;
+      } else if (consumeNewlines && !next.isWhitespace) {
+        break;
+      }
       scanner.readChar();
     }
   }
@@ -335,11 +339,25 @@ class SassParser extends StylesheetParser {
     }
   }
 
-  /// Expect and consume a single newline character.
-  void _expectNewline() {
+  /// Expect and consume a single newline.
+  ///
+  /// If [canEndInSemicolon] is true, this will also consume a `;` before the
+  /// newline if present.
+  void _expectNewline({bool canEndInSemicolon = false}) {
     switch (scanner.peekChar()) {
+      case $semicolon
+          when canEndInSemicolon && [$lf, $ff].contains(scanner.peekChar(1)):
+        scanner.readChar();
+        scanner.readChar();
+        return;
+      case $semicolon when canEndInSemicolon && scanner.peekChar(1) == $cr:
+        scanner.readChar();
+        scanner.readChar();
+        if (scanner.peekChar() == $lf) scanner.readChar();
+        return;
       case $semicolon:
-        scanner.error("semicolons aren't allowed in the indented syntax.");
+        scanner.error(
+            "multiple statements on one line are not supported in the indented syntax.");
       case $cr:
         scanner.readChar();
         if (scanner.peekChar() == $lf) scanner.readChar();
